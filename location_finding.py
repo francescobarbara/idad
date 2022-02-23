@@ -70,7 +70,7 @@ class HiddenObjects(nn.Module):
         y = G(xi, theta) + Noise.
         """
         # two norm squared
-        sq_two_norm = (xi - theta).pow(2).sum(axis=-1)
+        sq_two_norm = ((xi - theta)*theta[0]).pow(2).sum(axis=-1)
         # add a small number before taking inverse (determines max signal)
         sq_two_norm_inverse = (self.max_signal + sq_two_norm).pow(-1)
         # sum over the K sources, add base signal and take log.
