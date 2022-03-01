@@ -39,12 +39,12 @@ class HiddenObjects(nn.Module):
     def __init__(
         self,
         design_net,
-        base_signal=0.1,  # G-map hyperparam
+        base_signal=0.1,  # G-map hyperparam    #these are the b and m of expression (124)
         max_signal=1e-4,  # G-map hyperparam
-        theta_loc=None,  # prior on theta mean hyperparam
-        theta_covmat=None,  # prior on theta covariance hyperparam
-        noise_scale=None,  # this is the scale of the noise term
-        p=1,  # physical dimension
+        theta_loc=None,  # prior on theta mean hyperparam   #the mean which is 0_d in (125)
+        theta_covmat=None,  # prior on theta covariance hyperparam   #the covariance I_d in (125)
+        noise_scale=None,  # this is the scale of the noise term    #sigma in (125)
+        p=1,  # physical dimension    #if we are in 1,2 or 3 dimensions
         K=1,  # number of sources
         T=2,  # number of experiments
     ):
@@ -53,25 +53,24 @@ class HiddenObjects(nn.Module):
         self.base_signal = base_signal
         self.max_signal = max_signal
         # Set prior:
-        self.theta_loc = theta_loc if theta_loc is not None else torch.zeros((K, p))
-        self.theta_covmat = theta_covmat if theta_covmat is not None else torch.eye(p)
+        self.theta_loc = theta_loc if theta_loc is not None else torch.zeros((K, p))    #weird, you can have K different priors for the means
+        self.theta_covmat = theta_covmat if theta_covmat is not None else torch.eye(p)  #but a single prior for the covariance of coordinatewise locations
         self.theta_prior = dist.MultivariateNormal(
             self.theta_loc, self.theta_covmat
-        ).to_event(1)
+        ).to_event(1)                           #https://pytorch.org/docs/stable/distributions.html   can sample from it, #to_event says that dimension is 1 (Pyro)
         # Observations noise scale:
         self.noise_scale = noise_scale if noise_scale is not None else torch.tensor(1.0)
-        self.n = 1  # samples per design=1
+        self.n = 1  # batch=1
         self.p = p  # dimension of theta (location finding example will be 1, 2 or 3).
         self.K = K  # number of sources
         self.T = T  # number of experiments
 
-    def forward_map(self, xi, theta):
+    def forward_map(self, xi, theta):               #THIS IS WHAT YOU DEFINITELY WANT TO CHANGE
         """Defines the forward map for the hidden object example
         y = G(xi, theta) + Noise.
         """
         # two norm squared
-        sq_two_norm = ((xi - theta)*theta[0]).pow(2).sum(axis=-1)
-        # add a small number before taking inverse (determines max signal)
+        sq_two_norm = (xi - theta).pow(2).sum(axis=-1)    #ricorda di usare pow
         sq_two_norm_inverse = (self.max_signal + sq_two_norm).pow(-1)
         # sum over the K sources, add base signal and take log.
         mean_y = torch.log(self.base_signal + sq_two_norm_inverse.sum(-1, keepdim=True))
@@ -79,40 +78,37 @@ class HiddenObjects(nn.Module):
 
     def model(self):
         if hasattr(self.design_net, "parameters"):
-            #! this is required for the pyro optimizer
             pyro.module("design_net", self.design_net)
 
         ########################################################################
         # Sample latent variables theta
         ########################################################################
-        theta = latent_sample("theta", self.theta_prior)
+        theta = latent_sample("theta", self.theta_prior)     #simply samples from the given distribution, look at oed/primitives for code, non si capisce un cazzo
         y_outcomes = []
         xi_designs = []
 
         # T-steps experiment
         for t in range(self.T):
             ####################################################################
-            # Get a design xi; shape is [batch size x self.n x self.p]
-            ####################################################################
+            # Get a design xi; shape is [num-outer-samples x 1 x 1]
+            ####################################################################  #you're picking the next xi by feeding the network (self.design_net) xi_designs and y_outcomes
             xi = compute_design(
                 f"xi{t + 1}", self.design_net.lazy(*zip(xi_designs, y_outcomes))
             )
+
             ####################################################################
-            # Sample y at xi; shape is [batch size x 1]
-            ####################################################################
+            # Sample y at xi; shape is [num-outer-samples x 1]
+            ####################################################################    #qui potresti solo cambiare forward_map e lasci il gaussian noise con standard dev noise_scale
             mean = self.forward_map(xi, theta)
             sd = self.noise_scale
             y = observation_sample(f"y{t + 1}", dist.Normal(mean, sd).to_event(1))
 
-            ####################################################################
-            # Update history
-            ####################################################################
-            y_outcomes.append(y)
+            y_outcomes.append(y)                    
             xi_designs.append(xi)
 
-        return theta, xi_designs, y_outcomes
+        return y_outcomes               
 
-    def forward(self, theta):
+    def forward(self, theta):                       #different than dad
         """Run the policy for a given theta"""
         self.design_net.eval()
 
@@ -388,7 +384,7 @@ def single_run(
         T=T,
     )
 
-    ### Set-up loss ###
+    ### Set-up loss ###                             #this is going to be key for dad
     if mi_estimator == "sPCE":
         mi_loss_instance = PriorContrastiveEstimation(
             model=ho_model.model,
@@ -430,7 +426,7 @@ def single_run(
         # Log every 200 losses -> too slow (and unnecessary) to log everything
         if (i - 1) % 200 == 0:
             num_steps_range.set_description("Loss: {:.3f} ".format(loss))
-            loss_eval = oed.evaluate_loss()
+            loss_eval = oed.evaluate_loss()                             #change this for dad possibly
             mlflow.log_metric("loss", loss_eval, step=i)
 
         # Check if lr should be decreased every <epoch_size> steps.
