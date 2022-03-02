@@ -127,7 +127,7 @@ class HiddenObjects(nn.Module):
                 return pyro.condition(self.model, data={"theta": theta})()
 
         with torch.no_grad():
-            theta, designs, observations = conditioned_model()
+            theta, designs, observations = conditioned_model()              #I think you have to add alpha here?
         self.design_net.train()
         return designs, observations
 
