@@ -92,6 +92,7 @@ class HiddenObjects(nn.Module):
         # Sample latent variables theta
         ########################################################################
         theta = latent_sample("theta", self.theta_prior)     #simply samples from the given distribution, look at oed/primitives for code, non si capisce un cazzo
+        alpha = latent_sample("alpha", self.alpha_prior)        #N 
         y_outcomes = []
         xi_designs = []
 
@@ -107,7 +108,7 @@ class HiddenObjects(nn.Module):
             ####################################################################
             # Sample y at xi; shape is [num-outer-samples x 1]
             ####################################################################    #qui potresti solo cambiare forward_map e lasci il gaussian noise con standard dev noise_scale
-            mean = self.forward_map(xi, theta)
+            mean = self.forward_map(xi, theta, alpha)                               #N
             sd = self.noise_scale
             y = observation_sample(f"y{t + 1}", dist.Normal(mean, sd).to_event(1))
 
@@ -116,7 +117,7 @@ class HiddenObjects(nn.Module):
 
         return y_outcomes               
 
-    def forward(self, theta):                       #different than dad
+    def forward(self, theta):                       #different than dad, capisci se aggiungere alpha here, maybe read pyro doc
         """Run the policy for a given theta"""
         self.design_net.eval()
 
