@@ -47,6 +47,8 @@ class HiddenObjects(nn.Module):
         p=1,  # physical dimension    #if we are in 1,2 or 3 dimensions
         K=1,  # number of sources
         T=2,  # number of experiments
+        alpha_loc=None, #N
+        alpha_covmat=None, #N
     ):
         super().__init__()
         self.design_net = design_net
@@ -58,10 +60,16 @@ class HiddenObjects(nn.Module):
         self.theta_prior = dist.MultivariateNormal(
             self.theta_loc, self.theta_covmat
         ).to_event(1)                           #https://pytorch.org/docs/stable/distributions.html   can sample from it, #to_event says that dimension is 1 (Pyro)
+        #N
+        self.alpha_loc = alpha_loc if alpha_loc is not None else torch.zeros((K, p))    #N   #poi le dimensioni K, p sono da cambiare
+        self.alpha_covmat = alpha_covmat if alpha_covmat is not None else torch.eye(p)  #N
+        self.alpha_prior = dist.MultivariateNormal(
+            self.alpha_loc, self.alpha_covmat
+        ).to_event(1)                           #N
         # Observations noise scale:
         self.noise_scale = noise_scale if noise_scale is not None else torch.tensor(1.0)
         self.n = 1  # batch=1
-        self.p = p  # dimension of theta (location finding example will be 1, 2 or 3).
+        self.p = p  # dimension of theta (location finding example will be 1, 2 or 3).      #you should do same with alpha
         self.K = K  # number of sources
         self.T = T  # number of experiments
 
