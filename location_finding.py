@@ -73,12 +73,12 @@ class HiddenObjects(nn.Module):
         self.K = K  # number of sources
         self.T = T  # number of experiments
 
-    def forward_map(self, xi, theta):               #THIS IS WHAT YOU DEFINITELY WANT TO CHANGE
+    def forward_map(self, xi, theta, alpha):               #THIS IS WHAT YOU DEFINITELY WANT TO CHANGE
         """Defines the forward map for the hidden object example
         y = G(xi, theta) + Noise.
         """
         # two norm squared
-        sq_two_norm = (xi - theta).pow(2).sum(axis=-1)    #ricorda di usare pow
+        sq_two_norm = (xi - theta).pow(2).sum(axis=-1)  +  (xi - alpha).pow(2).sum(axis=-1) #ricorda di usare pow  #N
         sq_two_norm_inverse = (self.max_signal + sq_two_norm).pow(-1)
         # sum over the K sources, add base signal and take log.
         mean_y = torch.log(self.base_signal + sq_two_norm_inverse.sum(-1, keepdim=True))
