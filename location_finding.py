@@ -140,9 +140,9 @@ class HiddenObjects(nn.Module):
         else:
             theta = theta.unsqueeze(0).expand(n_trace, *theta.shape)        #unsqueeze adds an extra [....] in the tensor #expand crea
             # dims: [n_trace * number of thetas given, shape of theta]      #expand expands a dimension of size 1
-            theta = theta.reshape(-1, *theta.shape[2:])
+            theta = theta.reshape(-1, *theta.shape[2:])                     #does exactly what it's given in #dims, essentially it repeats the thetas given N_trace times
 
-        designs, observations = self.forward(theta)
+        designs, observations = self.forward(theta)                         #designs has shape self.T x n_trace
         output = []
         true_thetas = []
 
@@ -155,16 +155,16 @@ class HiddenObjects(nn.Module):
             # Print optimal designs, observations for given theta
             for t in range(self.T):
                 xi = designs[t][i].detach().cpu().reshape(-1)
-                run_xis.append(xi)
-                y = observations[t][i].detach().cpu().item()
-                run_ys.append(y)
+                run_xis.append(xi)                                      #run_xis is a list of dimension self.T where each element has len(xi) i.e. self.p
+                y = observations[t][i].detach().cpu().item()                
+                run_ys.append(y)                                        #run_ys has dimension self.T (becuase obvs y has shape 1)
                 if verbose:
-                    print(f"xi{t + 1}: {xi},   y{t + 1}: {y}")
+                    print(f"xi{t + 1}: {xi},   y{t + 1}: {y}")          
             run_df = pd.DataFrame(torch.stack(run_xis).numpy())
-            run_df.columns = [f"xi_{i}" for i in range(self.p)]
+            run_df.columns = [f"xi_{i}" for i in range(self.p)]         #p is the dimension of theta (generally 2)
             run_df["observations"] = run_ys
-            run_df["order"] = list(range(1, self.T + 1))
-            run_df["run_id"] = i + 1
+            run_df["order"] = list(range(1, self.T + 1))                
+            run_df["run_id"] = i + 1                                    #see quaderno
             output.append(run_df)
 
         self.design_net.train()
@@ -205,20 +205,20 @@ def single_run(
 
     # history encoder hidden dimensions: apply to both critic and design net
     # each (xi, y) gets one encoding
-    hist_encoder_HD = [64, hidden_dim]
+    hist_encoder_HD = [64, hidden_dim]                          #hidden_dim = 512 at page 25, indeed the emitter hidden width is 256
     # design emitter hidden dimensions
     des_emitter_HD = [hidden_dim // 2, encoding_dim]
 
-    # head layers for the CRITIC ONLY
+    # head layers for the CRITIC ONLY                           #look at page 26 and it tells you everything
     hist_enc_critic_head_HD = [
         hidden_dim * int(max(math.log(T), 1)),
         hidden_dim * int(max(math.log(T), 1)) // 2,
         hidden_dim,
     ]
     # latent encoder hidden dimensions: for CRITIC ONLY
-    latent_encoder_HD = [16, 64, hidden_dim]
+    latent_encoder_HD = [16, 64, hidden_dim]                    #third table page 25
 
-    if mi_estimator == "sPCE":
+    if mi_estimator == "sPCE":                                  #I'll use this one as in the notes
         latent_encoder_HD = []
         hist_enc_critic_head_HD = []
         critic_arch = None
