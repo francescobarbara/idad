@@ -136,10 +136,10 @@ class HiddenObjects(nn.Module):
         self.design_net.eval()
 
         if theta is None:
-            theta = self.theta_prior.sample(torch.Size([n_trace]))
+            theta = self.theta_prior.sample(torch.Size([n_trace]))       #sample the n_trace thetas
         else:
-            theta = theta.unsqueeze(0).expand(n_trace, *theta.shape)
-            # dims: [n_trace * number of thetas given, shape of theta]
+            theta = theta.unsqueeze(0).expand(n_trace, *theta.shape)        #unsqueeze adds an extra [....] in the tensor #expand crea
+            # dims: [n_trace * number of thetas given, shape of theta]      #expand expands a dimension of size 1
             theta = theta.reshape(-1, *theta.shape[2:])
 
         designs, observations = self.forward(theta)
