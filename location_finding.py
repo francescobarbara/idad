@@ -291,14 +291,14 @@ def single_run(
             output_dim=encoding_dim,
             name="critic_head",
         )
-        if critic_arch == "cat":
+        if critic_arch == "cat":                                                    #this is the case where you don't have independence of examples, avoid
             critic_history_encoder = ConcatImplicitDAD(
                 encoder_network=critic_design_outcome_encoder,
                 emission_network=critic_head,
                 empty_value=torch.zeros(design_dim).to(device),
                 T=T,
             )
-        else:
+        else:                                                                       #put self_attention_layer = None to do simple pooling
             critic_history_encoder = PermutationInvariantImplicitDAD(
                 encoder_network=critic_design_outcome_encoder,
                 # pass head layer as an emitter
