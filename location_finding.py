@@ -348,13 +348,15 @@ def single_run(
     ### Prior hyperparams ###
     # The prior is K independent * p-variate Normals. For example, if there's 1 source
     # (K=1) in 2D (p=2), then we have 1 bivariate Normal.
-    theta_prior_loc = torch.zeros((K, p), device=device)  # mean of the prior
+    theta_prior_loc = torch.zeros((K, p), device=device)  # mean of the prior                           #do same for alpha here?
     theta_prior_covmat = torch.eye(p, device=device)  # covariance of the prior
     # noise of the model: the sigma in N(G(theta, xi), sigma)
     noise_scale_tensor = noise_scale * torch.tensor(
         1.0, dtype=torch.float32, device=device
     )
-
+    alpha_prior_loc = torch.zeros((K, p), device=device)  # mean of the prior                           #N
+    alpha_prior_covmat = torch.eye(p, device=device)  # covariance of the prior                         #N
+    
     ### Set-up optimiser ###
     optimizer = torch.optim.Adam
     patience = 5
@@ -382,7 +384,7 @@ def single_run(
         }
     )
     mlflow.log_param("annealing_scheme", [epoch_size, patience, gamma])
-
+                                                                                        #in the init of hiddenobjects add alpha
     ho_model = HiddenObjects(
         design_net=design_net_init,
         theta_loc=theta_prior_loc,
@@ -391,9 +393,11 @@ def single_run(
         p=p,
         K=K,
         T=T,
+        alpha_loc=alpha_prior_loc,                                                  #N
+        alpha_covmat=alpha_prior_covmat,                                            #N
     )
 
-    ### Set-up loss ###                             #this is going to be key for dad
+    ### Set-up loss ###                             #this is going to be key for dad, very hard to understand esitmators/mi.py
     if mi_estimator == "sPCE":
         mi_loss_instance = PriorContrastiveEstimation(
             model=ho_model.model,
